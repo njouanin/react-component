@@ -1,0 +1,67 @@
+{
+  "name": "solid-react-component",
+  "version": "0.2.1",
+  "description": "Reusable React components for Solid apps (login, and more to come)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./login": {
+      "types": "./dist/login/index.d.ts",
+      "import": "./dist/login/index.js",
+      "require": "./dist/login/index.cjs"
+    },
+    "./login/next": {
+      "types": "./dist/login/next.d.ts",
+      "import": "./dist/login/next.js",
+      "require": "./dist/login/next.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solid/react-components.git"
+  },
+  "bugs": {
+    "url": "https://github.com/solid/react-components/issues"
+  },
+  "homepage": "https://github.com/solid/react-components#readme",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "@ldo/solid-react": ">=1.0.0-alpha.33"
+  },
+  "optionalPeerDependencies": {
+    "next": ">=13.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "next": "^15.0.0",
+    "react": "^19",
+    "tsup": "^8",
+    "typescript": "^5"
+  },
+  "keywords": [
+    "solid",
+    "react",
+    "components",
+    "oidc",
+    "login",
+    "authentication"
+  ],
+  "license": "MIT"
+}

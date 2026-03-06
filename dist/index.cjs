@@ -1,0 +1,918 @@
+"use client";
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// src/index.ts
+var src_exports = {};
+__export(src_exports, {
+  AuthGuard: () => AuthGuard,
+  DEFAULT_CONFIG: () => DEFAULT_CONFIG,
+  LoginFormControl: () => LoginFormControl,
+  SolidLoginNavigationProvider: () => SolidLoginNavigationProvider,
+  SolidLoginPage: () => SolidLoginPage,
+  useSolidLogin: () => useSolidLogin,
+  useSolidLoginNavigation: () => useSolidLoginNavigation,
+  validateIssuerUrl: () => validateIssuerUrl
+});
+module.exports = __toCommonJS(src_exports);
+
+// src/login/AuthGuard.tsx
+var import_react2 = require("react");
+var import_solid_react = require("@ldo/solid-react");
+
+// src/login/NavigationContext.tsx
+var import_react = require("react");
+var import_jsx_runtime = require("react/jsx-runtime");
+var SolidLoginNavigationContext = (0, import_react.createContext)(null);
+function SolidLoginNavigationProvider({
+  navigation,
+  config,
+  children
+}) {
+  const fullConfig = {
+    loginPath: config?.loginPath ?? "/login",
+    homePath: config?.homePath ?? "/"
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SolidLoginNavigationContext.Provider, { value: { navigation, config: fullConfig }, children });
+}
+function useSolidLoginNavigation() {
+  return (0, import_react.useContext)(SolidLoginNavigationContext);
+}
+
+// src/login/AuthGuard.tsx
+var import_jsx_runtime2 = require("react/jsx-runtime");
+function hasSessionInStorage() {
+  if (typeof window === "undefined") return false;
+  try {
+    const keys = Object.keys(localStorage);
+    return keys.some(
+      (key) => key.includes("solidClientAuthn") || key.includes("solid-auth") || key.includes("oidc") || key.includes("session")
+    );
+  } catch {
+    return false;
+  }
+}
+var defaultFallback = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+  "div",
+  {
+    style: {
+      display: "flex",
+      minHeight: "100vh",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#fff"
+    },
+    children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Loading..." })
+  }
+);
+function AuthGuardContent({ children, fallback = defaultFallback }) {
+  const { session } = (0, import_solid_react.useSolidAuth)();
+  const nav = useSolidLoginNavigation();
+  const [isCheckingSession, setIsCheckingSession] = (0, import_react2.useState)(true);
+  const [hasSessionIndicator] = (0, import_react2.useState)(() => hasSessionInStorage());
+  const [wasLoggedIn, setWasLoggedIn] = (0, import_react2.useState)(false);
+  if (!nav) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "solid-react-component: AuthGuard requires SolidLoginNavigationProvider (or use 'solid-react-component/login/next')"
+      );
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children });
+  }
+  const { navigation, config } = nav;
+  const searchParams = navigation.getSearchParams();
+  const pathname = navigation.getPathname();
+  const isOAuthCallback = searchParams.has("code") || searchParams.has("state");
+  const isLoginPage = pathname === config.loginPath;
+  const hasSessionData = !!(session.webId || session.sessionId || session.clientAppId);
+  (0, import_react2.useEffect)(() => {
+    if (session.isLoggedIn) setWasLoggedIn(true);
+    if (isOAuthCallback) {
+      setIsCheckingSession(true);
+      if (session.isLoggedIn) {
+        setIsCheckingSession(false);
+        const t2 = setTimeout(() => navigation.redirect(config.homePath), 200);
+        return () => clearTimeout(t2);
+      }
+      const maxWait = setTimeout(() => setIsCheckingSession(false), 1e4);
+      return () => clearTimeout(maxWait);
+    }
+    if (session.isLoggedIn) {
+      setIsCheckingSession(false);
+      if (isLoginPage) navigation.replace(config.homePath);
+      return;
+    }
+    if (wasLoggedIn && !session.isLoggedIn) {
+      setIsCheckingSession(false);
+      if (!isLoginPage) navigation.replace(config.loginPath);
+      return;
+    }
+    const shouldWait = hasSessionData || hasSessionIndicator;
+    const t = setTimeout(() => {
+      setIsCheckingSession(false);
+      if (!session.isLoggedIn && !isLoginPage && !isOAuthCallback) {
+        navigation.replace(config.loginPath);
+      }
+    }, shouldWait ? 2e3 : 200);
+    return () => clearTimeout(t);
+  }, [
+    session.isLoggedIn,
+    session.webId,
+    session.sessionId,
+    isOAuthCallback,
+    hasSessionIndicator,
+    hasSessionData,
+    wasLoggedIn,
+    isLoginPage,
+    config.loginPath,
+    config.homePath,
+    navigation
+  ]);
+  if (isCheckingSession || isOAuthCallback) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
+  if (isOAuthCallback && isLoginPage) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
+  if (!session.isLoggedIn && !isLoginPage) return null;
+  if (session.isLoggedIn && isLoginPage) return null;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children });
+}
+function AuthGuard(props) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_react2.Suspense, { fallback: props.fallback ?? defaultFallback, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(AuthGuardContent, { ...props }) });
+}
+
+// src/login/SolidLoginPage.tsx
+var import_react4 = require("react");
+
+// src/login/useSolidLogin.ts
+var import_react3 = require("react");
+var import_solid_react2 = require("@ldo/solid-react");
+var DEFAULT_PRESETS = [
+  { label: "Solid Community", value: "https://solidcommunity.net/", secondaryLabel: "https://solidcommunity.net/" },
+  { label: "Inrupt", value: "https://login.inrupt.com", secondaryLabel: "https://login.inrupt.com" }
+];
+function validateIssuerUrl(url) {
+  if (!url.trim()) return { valid: false, error: "Please enter a Solid Identity Provider URL" };
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { valid: false, error: "URL must start with http:// or https://" };
+    }
+  } catch {
+    return { valid: false, error: "Please enter a valid URL" };
+  }
+  return { valid: true, error: null };
+}
+function useSolidLogin(options = {}) {
+  const { session, login } = (0, import_solid_react2.useSolidAuth)();
+  const [issuerInput, setIssuerInput] = (0, import_react3.useState)(options.defaultIssuer ?? "");
+  const [isLoading, setIsLoading] = (0, import_react3.useState)(false);
+  const [error, setError] = (0, import_react3.useState)(null);
+  const presetIssuers = options.presetIssuers ?? DEFAULT_PRESETS;
+  const validateAndSubmit = (0, import_react3.useCallback)(async () => {
+    const trimmed = issuerInput.trim();
+    const { valid, error: err } = validateIssuerUrl(trimmed);
+    if (!valid) {
+      setError(err);
+      return false;
+    }
+    setError(null);
+    setIsLoading(true);
+    try {
+      await login(trimmed);
+      return true;
+    } catch (e) {
+      console.error("Login failed:", e);
+      setIsLoading(false);
+      return false;
+    }
+  }, [issuerInput, login]);
+  const setIssuer = (0, import_react3.useCallback)((value) => {
+    setIssuerInput(value);
+    setError(null);
+  }, []);
+  return {
+    session,
+    issuerInput,
+    setIssuerInput: setIssuer,
+    isLoading,
+    error,
+    presetIssuers,
+    validateAndSubmit,
+    login
+  };
+}
+
+// src/login/SolidLoginPage.tsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
+var defaultTitle = "Sign in";
+var defaultSubtitle = "to continue";
+function ChevronDownIcon({
+  open,
+  style
+}) {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "svg",
+    {
+      width: "20",
+      height: "20",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: "2",
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+      style: {
+        transform: open ? "rotate(180deg)" : "rotate(0deg)",
+        transition: "transform 0.2s",
+        ...style
+      },
+      "aria-hidden": true,
+      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "m6 9 6 6 6-6" })
+    }
+  );
+}
+function GitHubIcon({ style }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "svg",
+    {
+      width: "16",
+      height: "16",
+      fill: "currentColor",
+      viewBox: "0 0 24 24",
+      "aria-hidden": true,
+      style,
+      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "path",
+        {
+          fillRule: "evenodd",
+          d: "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z",
+          clipRule: "evenodd"
+        }
+      )
+    }
+  );
+}
+function ReportIssueIcon({ style }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "svg",
+    {
+      width: "16",
+      height: "16",
+      fill: "none",
+      stroke: "currentColor",
+      viewBox: "0 0 24 24",
+      "aria-hidden": true,
+      style,
+      children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        "path",
+        {
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          strokeWidth: 2,
+          d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        }
+      )
+    }
+  );
+}
+function ButtonSpinner() {
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    "span",
+    {
+      style: {
+        display: "inline-block",
+        width: 14,
+        height: 14,
+        border: "2px solid transparent",
+        borderTopColor: "currentColor",
+        borderRadius: "50%",
+        animation: "solid-login-spin 0.6s linear infinite",
+        marginRight: 8,
+        verticalAlign: "middle"
+      }
+    }
+  );
+}
+function SolidLoginPage({
+  onAlreadyLoggedIn,
+  defaultIssuer,
+  presetIssuers,
+  logo,
+  logoAlt = "Logo",
+  title = defaultTitle,
+  subtitle = defaultSubtitle,
+  inputPlaceholder = "Enter your provider URL or select from the list",
+  inputLabel = "Solid Identity Provider",
+  buttonLabel = "Next",
+  buttonLoadingLabel = "Signing in...",
+  className = "",
+  footerGitHubUrl,
+  footerIssuesUrl,
+  renderLogo,
+  renderForm,
+  renderFooter
+}) {
+  const {
+    session,
+    issuerInput,
+    setIssuerInput,
+    isLoading,
+    error,
+    presetIssuers: presets,
+    validateAndSubmit
+  } = useSolidLogin({ defaultIssuer, presetIssuers });
+  const [showDropdown, setShowDropdown] = (0, import_react4.useState)(false);
+  const [highlightedIndex, setHighlightedIndex] = (0, import_react4.useState)(-1);
+  const inputRef = (0, import_react4.useRef)(null);
+  const dropdownRef = (0, import_react4.useRef)(null);
+  const generatedId = (0, import_react4.useId)();
+  const inputId = `solid-login-combobox-${generatedId}`;
+  const listboxId = `${inputId}-listbox`;
+  (0, import_react4.useEffect)(() => {
+    if (session.isLoggedIn && onAlreadyLoggedIn) onAlreadyLoggedIn();
+  }, [session.isLoggedIn, onAlreadyLoggedIn]);
+  (0, import_react4.useEffect)(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) && inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
+  const filteredOptions = (0, import_react4.useMemo)(() => {
+    if (!issuerInput.trim()) return presets;
+    const q = issuerInput.toLowerCase();
+    return presets.filter(
+      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || o.secondaryLabel && o.secondaryLabel.toLowerCase().includes(q)
+    );
+  }, [issuerInput, presets]);
+  if (session.isLoggedIn) return null;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    validateAndSubmit();
+  };
+  const handleSelect = (option) => {
+    setIssuerInput(option.value);
+    setShowDropdown(false);
+    setHighlightedIndex(-1);
+    inputRef.current?.focus();
+  };
+  const handleKeyDown = (e) => {
+    if (!showDropdown) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setShowDropdown(true);
+        setHighlightedIndex(-1);
+      }
+      return;
+    }
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex(
+          (prev) => prev < filteredOptions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) => prev > 0 ? prev - 1 : prev);
+        break;
+      case "Enter":
+        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+          e.preventDefault();
+          handleSelect(filteredOptions[highlightedIndex]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setShowDropdown(false);
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+  const formProps = {
+    issuerInput,
+    setIssuerInput,
+    error,
+    presetIssuers: presets,
+    isLoading,
+    onSubmit: handleSubmit,
+    onIssuerChange: setIssuerInput
+  };
+  if (renderForm) {
+    return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+      "main",
+      {
+        className,
+        role: "main",
+        "aria-label": "Sign in page",
+        style: { display: "flex", minHeight: "100vh", background: "#fff" },
+        children: renderForm(formProps)
+      }
+    );
+  }
+  const showFooter = renderFooter || footerGitHubUrl != null && footerIssuesUrl != null;
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("style", { children: `
+        @keyframes solid-login-spin {
+          to { transform: rotate(360deg); }
+        }
+        .solid-login-combobox-input:focus {
+          border-color: #7B42F6;
+          box-shadow: 0 0 0 1px #7B42F6;
+        }
+        @media (max-width: 1023px) {
+          .solid-login-left-panel { display: none !important; }
+          .solid-login-mobile-header { display: flex !important; }
+        }
+        @media (min-width: 1024px) {
+          .solid-login-mobile-header { display: none !important; }
+        }
+        @media (min-width: 1024px) {
+          .solid-login-right-panel { min-width: 450px; }
+        }
+      ` }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+      "main",
+      {
+        className,
+        role: "main",
+        "aria-label": "Sign in page",
+        style: {
+          display: "flex",
+          flexDirection: "row",
+          flexWrap: "wrap",
+          minHeight: "100vh",
+          background: "#fff"
+        },
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+            "section",
+            {
+              className: "solid-login-left-panel",
+              "aria-label": "Branding section",
+              style: {
+                display: "flex",
+                flex: "1 1 50%",
+                minWidth: 280,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRight: "1px solid #e5e7eb",
+                background: "#F3EDFF",
+                padding: "2rem"
+              },
+              children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { maxWidth: "28rem", width: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                "header",
+                {
+                  style: {
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4
+                  },
+                  children: [
+                    renderLogo ? renderLogo() : logo ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                      "div",
+                      {
+                        style: {
+                          width: 300,
+                          height: 90,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        },
+                        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                          "img",
+                          {
+                            src: logo,
+                            alt: logoAlt,
+                            style: { width: "100%", height: "100%", objectFit: "contain" }
+                          }
+                        )
+                      }
+                    ) : null,
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                      "h1",
+                      {
+                        style: {
+                          marginBottom: 2,
+                          fontSize: "2.25rem",
+                          fontWeight: 400,
+                          color: "#000"
+                        },
+                        children: title
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: { fontSize: "1rem", color: "#4b5563" }, children: subtitle })
+                  ]
+                }
+              ) })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+            "section",
+            {
+              className: "solid-login-right-panel",
+              "aria-label": "Sign in form section",
+              style: {
+                display: "flex",
+                flex: "1 1 50%",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#fff",
+                padding: "3rem 1rem",
+                minWidth: 0,
+                minHeight: 320
+              },
+              children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { width: "100%", maxWidth: "28rem" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                  "header",
+                  {
+                    className: "solid-login-mobile-header",
+                    style: {
+                      display: "none",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "2rem"
+                    },
+                    children: [
+                      renderLogo ? renderLogo() : logo ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                        "div",
+                        {
+                          style: {
+                            width: 300,
+                            height: 90,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginBottom: 8
+                          },
+                          children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                            "img",
+                            {
+                              src: logo,
+                              alt: logoAlt,
+                              style: { width: "100%", height: "100%", objectFit: "contain" }
+                            }
+                          )
+                        }
+                      ) : null,
+                      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                        "h1",
+                        {
+                          style: {
+                            marginBottom: 8,
+                            fontSize: "1.875rem",
+                            fontWeight: 400,
+                            color: "#000",
+                            textAlign: "center"
+                          },
+                          children: title
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: { fontSize: "1rem", color: "#4b5563", textAlign: "center" }, children: subtitle })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                  "form",
+                  {
+                    onSubmit: handleSubmit,
+                    "aria-label": "Sign in form",
+                    noValidate: true,
+                    style: { display: "flex", flexDirection: "column", gap: "1.5rem" },
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                        "label",
+                        {
+                          htmlFor: inputId,
+                          style: {
+                            display: "block",
+                            marginBottom: 8,
+                            fontSize: "0.875rem",
+                            fontWeight: 500,
+                            color: "#000"
+                          },
+                          children: inputLabel
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: { position: "relative" }, children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                          "input",
+                          {
+                            ref: inputRef,
+                            id: inputId,
+                            type: "text",
+                            value: issuerInput,
+                            onChange: (e) => setIssuerInput(e.target.value),
+                            onFocus: () => {
+                              setShowDropdown(true);
+                              setHighlightedIndex(-1);
+                            },
+                            onKeyDown: handleKeyDown,
+                            placeholder: inputPlaceholder,
+                            disabled: isLoading,
+                            "aria-invalid": !!error,
+                            "aria-expanded": showDropdown,
+                            "aria-controls": listboxId,
+                            "aria-autocomplete": "list",
+                            "aria-activedescendant": highlightedIndex >= 0 ? `${inputId}-option-${highlightedIndex}` : void 0,
+                            role: "combobox",
+                            autoComplete: "off",
+                            className: "solid-login-combobox-input",
+                            style: {
+                              width: "100%",
+                              height: 48,
+                              paddingLeft: 16,
+                              paddingRight: 40,
+                              fontSize: "1rem",
+                              color: "#000",
+                              background: "#fff",
+                              border: `1px solid ${error ? "#fca5a5" : "#d1d5db"}`,
+                              borderRadius: 6,
+                              outline: "none",
+                              boxSizing: "border-box"
+                            },
+                            onBlur: () => {
+                            }
+                          }
+                        ),
+                        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => {
+                              setShowDropdown(!showDropdown);
+                              inputRef.current?.focus();
+                            },
+                            "aria-label": showDropdown ? "Hide options" : "Show options",
+                            "aria-expanded": showDropdown,
+                            tabIndex: -1,
+                            style: {
+                              position: "absolute",
+                              right: 12,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              padding: 0,
+                              border: "none",
+                              background: "none",
+                              cursor: "pointer",
+                              color: "#9ca3af"
+                            },
+                            children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ChevronDownIcon, { open: showDropdown })
+                          }
+                        ),
+                        showDropdown && filteredOptions.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                          "div",
+                          {
+                            ref: dropdownRef,
+                            id: listboxId,
+                            role: "listbox",
+                            "aria-label": "Options",
+                            style: {
+                              position: "absolute",
+                              zIndex: 10,
+                              marginTop: 4,
+                              width: "100%",
+                              maxHeight: 240,
+                              overflow: "auto",
+                              border: "1px solid #e5e7eb",
+                              borderRadius: 6,
+                              background: "#fff",
+                              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
+                            },
+                            children: filteredOptions.map((option, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                              "button",
+                              {
+                                id: `${inputId}-option-${index}`,
+                                type: "button",
+                                role: "option",
+                                "aria-selected": issuerInput === option.value,
+                                onClick: () => handleSelect(option),
+                                onMouseEnter: () => setHighlightedIndex(index),
+                                style: {
+                                  width: "100%",
+                                  padding: "12px 16px",
+                                  textAlign: "left",
+                                  border: "none",
+                                  background: highlightedIndex === index ? "#f3f4f6" : "transparent",
+                                  cursor: "pointer",
+                                  fontSize: "0.875rem",
+                                  color: "#111"
+                                },
+                                children: [
+                                  /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { fontWeight: 500, marginBottom: 2 }, children: option.label }),
+                                  option.secondaryLabel && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                                    "div",
+                                    {
+                                      style: {
+                                        fontSize: "0.75rem",
+                                        color: "#6b7280",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap"
+                                      },
+                                      children: option.secondaryLabel
+                                    }
+                                  )
+                                ]
+                              },
+                              option.value
+                            ))
+                          }
+                        )
+                      ] }),
+                      error && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                        "p",
+                        {
+                          role: "alert",
+                          style: { fontSize: "0.75rem", color: "#dc2626", marginTop: 4 },
+                          children: error
+                        }
+                      ),
+                      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                        "div",
+                        {
+                          style: {
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            paddingTop: 16
+                          },
+                          children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                            "button",
+                            {
+                              type: "submit",
+                              disabled: isLoading,
+                              "aria-busy": isLoading,
+                              "aria-label": isLoading ? "Signing in, please wait" : "Continue to sign in",
+                              style: {
+                                padding: "8px 16px",
+                                fontSize: "0.875rem",
+                                fontWeight: 500,
+                                color: "#fff",
+                                background: isLoading ? "#d1d5db" : "#7B42F6",
+                                border: "none",
+                                borderRadius: 6,
+                                cursor: isLoading ? "not-allowed" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "none"
+                              },
+                              children: isLoading ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ButtonSpinner, {}),
+                                buttonLoadingLabel
+                              ] }) : buttonLabel
+                            }
+                          )
+                        }
+                      )
+                    ]
+                  }
+                ),
+                showFooter && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+                  "footer",
+                  {
+                    className: "solid-login-footer-wrap",
+                    style: {
+                      marginTop: "6rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      width: "100%"
+                    },
+                    children: renderFooter ? renderFooter() : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                      "div",
+                      {
+                        style: {
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 16,
+                          fontSize: "0.875rem",
+                          color: "#6b7280"
+                        },
+                        children: [
+                          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                            "a",
+                            {
+                              href: footerGitHubUrl,
+                              target: "_blank",
+                              rel: "noopener noreferrer",
+                              style: {
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "inherit",
+                                textDecoration: "none"
+                              },
+                              "aria-label": "View source code on GitHub",
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(GitHubIcon, {}),
+                                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "GitHub" })
+                              ]
+                            }
+                          ),
+                          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { style: { color: "#d1d5db" }, children: "\xB7" }),
+                          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+                            "a",
+                            {
+                              href: footerIssuesUrl,
+                              target: "_blank",
+                              rel: "noopener noreferrer",
+                              style: {
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                color: "inherit",
+                                textDecoration: "none"
+                              },
+                              "aria-label": "Report an issue on GitHub",
+                              children: [
+                                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReportIssueIcon, {}),
+                                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: "Report an issue" })
+                              ]
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  }
+                )
+              ] })
+            }
+          )
+        ]
+      }
+    )
+  ] });
+}
+
+// src/login/LoginFormControl.tsx
+var import_jsx_runtime4 = require("react/jsx-runtime");
+function LoginFormControl({
+  children,
+  defaultIssuer,
+  presetIssuers
+}) {
+  const {
+    session,
+    issuerInput,
+    setIssuerInput,
+    isLoading,
+    error,
+    presetIssuers: presets,
+    validateAndSubmit
+  } = useSolidLogin({ defaultIssuer, presetIssuers });
+  if (session.isLoggedIn) return null;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    validateAndSubmit();
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: children({
+    issuerInput,
+    setIssuerInput,
+    isLoading,
+    error,
+    presetIssuers: presets,
+    onSubmit: handleSubmit,
+    onIssuerChange: setIssuerInput
+  }) });
+}
+
+// src/login/navigation.ts
+var DEFAULT_CONFIG = {
+  loginPath: "/login",
+  homePath: "/"
+};
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  AuthGuard,
+  DEFAULT_CONFIG,
+  LoginFormControl,
+  SolidLoginNavigationProvider,
+  SolidLoginPage,
+  useSolidLogin,
+  useSolidLoginNavigation,
+  validateIssuerUrl
+});
+//# sourceMappingURL=index.cjs.map
