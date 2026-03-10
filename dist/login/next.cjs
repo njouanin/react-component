@@ -53,7 +53,41 @@ function useSolidLoginNavigation() {
 var import_react2 = require("react");
 var import_solid_react = require("@ldo/solid-react");
 var import_jsx_runtime2 = require("react/jsx-runtime");
-var REDIRECT_RETURN_TO_KEY = "solid-login-returnTo";
+var RETURN_TO_KEY = "solid-login-returnTo";
+function storageGet(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function storageSet(storage, key, value) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+  }
+}
+function storageRemove(storage, key) {
+  try {
+    storage.removeItem(key);
+  } catch {
+  }
+}
+function isValidReturnPath(value) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//");
+}
+function resolveReturnTo(searchParams, loginPath, homePath) {
+  const fromParam = searchParams.get("returnTo");
+  if (isValidReturnPath(fromParam)) return fromParam;
+  if (typeof window === "undefined") return homePath;
+  const fromStorage = storageGet(sessionStorage, RETURN_TO_KEY);
+  if (isValidReturnPath(fromStorage)) return fromStorage;
+  const browserPath = window.location.pathname;
+  if (browserPath !== loginPath && browserPath !== homePath && isValidReturnPath(browserPath)) {
+    return browserPath;
+  }
+  return homePath;
+}
 var defaultFallback = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
   "div",
   {
@@ -67,10 +101,63 @@ var defaultFallback = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
     children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Loading..." })
   }
 );
-function AuthGuardContent({ children, fallback = defaultFallback }) {
+function AuthGuardContent({
+  children,
+  fallback = defaultFallback
+}) {
   const { session, ranInitialAuthCheck = true } = (0, import_solid_react.useSolidAuth)();
   const nav = useSolidLoginNavigation();
-  const [wasLoggedIn, setWasLoggedIn] = (0, import_react2.useState)(false);
+  const pathname = nav?.navigation.getPathname() ?? "/";
+  const searchParams = nav?.navigation.getSearchParams() ?? { has: () => false, get: () => null };
+  const config = nav?.config ?? { loginPath: "/login", homePath: "/" };
+  const isOAuthCallback = searchParams.has("code") || searchParams.has("state");
+  const isLoginPage = pathname === config.loginPath;
+  const hasRedirectedRef = (0, import_react2.useRef)(false);
+  const prevPathnameRef = (0, import_react2.useRef)(pathname);
+  if (prevPathnameRef.current !== pathname) {
+    prevPathnameRef.current = pathname;
+    hasRedirectedRef.current = false;
+  }
+  (0, import_react2.useEffect)(() => {
+    if (typeof window === "undefined" || !isLoginPage || session.isLoggedIn) return;
+    const returnTo = searchParams.get("returnTo");
+    if (isValidReturnPath(returnTo)) {
+      storageSet(sessionStorage, RETURN_TO_KEY, returnTo);
+    }
+  }, [isLoginPage, session.isLoggedIn]);
+  (0, import_react2.useEffect)(() => {
+    if (!nav || !ranInitialAuthCheck || hasRedirectedRef.current) return;
+    const { navigation } = nav;
+    const sp = navigation.getSearchParams();
+    const path = navigation.getPathname();
+    const isCallback = sp.has("code") || sp.has("state");
+    const isLogin = path === config.loginPath;
+    if (isCallback && session.isLoggedIn) {
+      hasRedirectedRef.current = true;
+      let target = resolveReturnTo(sp, config.loginPath, config.homePath);
+      if (target === config.loginPath) target = config.homePath;
+      storageRemove(sessionStorage, RETURN_TO_KEY);
+      navigation.redirect(target);
+      return;
+    }
+    if (session.isLoggedIn && isLogin && !isCallback) {
+      hasRedirectedRef.current = true;
+      let target = resolveReturnTo(sp, config.loginPath, config.homePath);
+      if (target === config.loginPath) target = config.homePath;
+      storageRemove(sessionStorage, RETURN_TO_KEY);
+      navigation.replace(target);
+      return;
+    }
+    if (!session.isLoggedIn && !isLogin && !isCallback) {
+      hasRedirectedRef.current = true;
+      const current = path || "/";
+      if (current !== config.loginPath && current !== config.homePath) {
+        storageSet(sessionStorage, RETURN_TO_KEY, current);
+      }
+      const loginUrl = current === config.loginPath || current === config.homePath ? config.loginPath : `${config.loginPath}?returnTo=${encodeURIComponent(current)}`;
+      navigation.replace(loginUrl);
+    }
+  }, [ranInitialAuthCheck, session.isLoggedIn, pathname, nav, config.loginPath, config.homePath]);
   if (!nav) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
@@ -79,93 +166,6 @@ function AuthGuardContent({ children, fallback = defaultFallback }) {
     }
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children });
   }
-  const { navigation, config } = nav;
-  const searchParams = navigation.getSearchParams();
-  const pathname = navigation.getPathname();
-  const isOAuthCallback = searchParams.has("code") || searchParams.has("state");
-  const isLoginPage = pathname === config.loginPath;
-  const redirectToLogin = () => {
-    const current = pathname || "/";
-    if (current === config.loginPath || current === config.homePath) {
-      navigation.replace(config.loginPath);
-    } else {
-      const returnTo = encodeURIComponent(current);
-      navigation.replace(`${config.loginPath}?returnTo=${returnTo}`);
-    }
-  };
-  (0, import_react2.useEffect)(() => {
-    if (typeof window === "undefined" || !isLoginPage || session.isLoggedIn) return;
-    const returnTo = searchParams.get("returnTo");
-    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
-      try {
-        sessionStorage.setItem(REDIRECT_RETURN_TO_KEY, returnTo);
-      } catch {
-      }
-    }
-  }, [isLoginPage, session.isLoggedIn]);
-  (0, import_react2.useEffect)(() => {
-    if (session.isLoggedIn) setWasLoggedIn(true);
-    if (isOAuthCallback) {
-      if (session.isLoggedIn) {
-        let target = config.homePath;
-        const returnToUrl = searchParams.get("returnTo");
-        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
-          target = returnToUrl;
-        } else if (typeof window !== "undefined") {
-          try {
-            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
-            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
-              target = stored;
-            }
-            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
-          } catch {
-          }
-        }
-        const t = setTimeout(() => navigation.redirect(target), 200);
-        return () => clearTimeout(t);
-      }
-      return;
-    }
-    if (!ranInitialAuthCheck) return;
-    if (session.isLoggedIn) {
-      if (isLoginPage) {
-        let target = config.homePath;
-        const returnToUrl = searchParams.get("returnTo");
-        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
-          target = returnToUrl;
-        } else if (typeof window !== "undefined") {
-          try {
-            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
-            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
-              target = stored;
-            }
-            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
-          } catch {
-          }
-        }
-        navigation.replace(target);
-      }
-      return;
-    }
-    if (wasLoggedIn && !session.isLoggedIn) {
-      if (!isLoginPage) redirectToLogin();
-      return;
-    }
-    if (!session.isLoggedIn && !isLoginPage) {
-      redirectToLogin();
-    }
-  }, [
-    ranInitialAuthCheck,
-    session.isLoggedIn,
-    session.webId,
-    session.sessionId,
-    isOAuthCallback,
-    wasLoggedIn,
-    isLoginPage,
-    config.loginPath,
-    config.homePath,
-    navigation
-  ]);
   if (!ranInitialAuthCheck) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
   if (isOAuthCallback) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
   if (!session.isLoggedIn && !isLoginPage) return null;
