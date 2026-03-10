@@ -4,21 +4,7 @@ import { useEffect, useState, Suspense, ReactNode } from "react";
 import { useSolidAuth } from "@ldo/solid-react";
 import { useSolidLoginNavigation } from "./NavigationContext";
 
-function hasSessionInStorage(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const keys = Object.keys(localStorage);
-    return keys.some(
-      (key) =>
-        key.includes("solidClientAuthn") ||
-        key.includes("solid-auth") ||
-        key.includes("oidc") ||
-        key.includes("session")
-    );
-  } catch {
-    return false;
-  }
-}
+const REDIRECT_RETURN_TO_KEY = "solid-login-returnTo";
 
 export interface AuthGuardProps {
   children: ReactNode;
@@ -41,11 +27,9 @@ const defaultFallback = (
 );
 
 function AuthGuardContent({ children, fallback = defaultFallback }: AuthGuardProps) {
-  const { session } = useSolidAuth();
+  const { session, ranInitialAuthCheck = true } = useSolidAuth();
   const nav = useSolidLoginNavigation();
 
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [hasSessionIndicator] = useState(() => hasSessionInStorage());
   const [wasLoggedIn, setWasLoggedIn] = useState(false);
 
   if (!nav) {
@@ -62,49 +46,93 @@ function AuthGuardContent({ children, fallback = defaultFallback }: AuthGuardPro
   const pathname = navigation.getPathname();
   const isOAuthCallback = searchParams.has("code") || searchParams.has("state");
   const isLoginPage = pathname === config.loginPath;
-  const hasSessionData = !!(session.webId || session.sessionId || (session as { clientAppId?: string }).clientAppId);
+
+  const redirectToLogin = () => {
+    const current = pathname || "/";
+    if (current === config.loginPath || current === config.homePath) {
+      navigation.replace(config.loginPath);
+    } else {
+      const returnTo = encodeURIComponent(current);
+      navigation.replace(`${config.loginPath}?returnTo=${returnTo}`);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !isLoginPage || session.isLoggedIn) return;
+    const returnTo = searchParams.get("returnTo");
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      try {
+        sessionStorage.setItem(REDIRECT_RETURN_TO_KEY, returnTo);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [isLoginPage, session.isLoggedIn]);
 
   useEffect(() => {
     if (session.isLoggedIn) setWasLoggedIn(true);
 
     if (isOAuthCallback) {
-      setIsCheckingSession(true);
       if (session.isLoggedIn) {
-        setIsCheckingSession(false);
-        const t = setTimeout(() => navigation.redirect(config.homePath), 200);
+        let target = config.homePath;
+        const returnToUrl = searchParams.get("returnTo");
+        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
+          target = returnToUrl;
+        } else if (typeof window !== "undefined") {
+          try {
+            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
+            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
+              target = stored;
+            }
+            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
+          } catch {
+            /* ignore */
+          }
+        }
+        const t = setTimeout(() => navigation.redirect(target), 200);
         return () => clearTimeout(t);
       }
-      const maxWait = setTimeout(() => setIsCheckingSession(false), 10000);
-      return () => clearTimeout(maxWait);
+      return;
     }
 
+    if (!ranInitialAuthCheck) return;
+
     if (session.isLoggedIn) {
-      setIsCheckingSession(false);
-      if (isLoginPage) navigation.replace(config.homePath);
+      if (isLoginPage) {
+        let target = config.homePath;
+        const returnToUrl = searchParams.get("returnTo");
+        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
+          target = returnToUrl;
+        } else if (typeof window !== "undefined") {
+          try {
+            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
+            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
+              target = stored;
+            }
+            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
+          } catch {
+            /* ignore */
+          }
+        }
+        navigation.replace(target);
+      }
       return;
     }
 
     if (wasLoggedIn && !session.isLoggedIn) {
-      setIsCheckingSession(false);
-      if (!isLoginPage) navigation.replace(config.loginPath);
+      if (!isLoginPage) redirectToLogin();
       return;
     }
 
-    const shouldWait = hasSessionData || hasSessionIndicator;
-    const t = setTimeout(() => {
-      setIsCheckingSession(false);
-      if (!session.isLoggedIn && !isLoginPage && !isOAuthCallback) {
-        navigation.replace(config.loginPath);
-      }
-    }, shouldWait ? 2000 : 200);
-    return () => clearTimeout(t);
+    if (!session.isLoggedIn && !isLoginPage) {
+      redirectToLogin();
+    }
   }, [
+    ranInitialAuthCheck,
     session.isLoggedIn,
     session.webId,
     session.sessionId,
     isOAuthCallback,
-    hasSessionIndicator,
-    hasSessionData,
     wasLoggedIn,
     isLoginPage,
     config.loginPath,
@@ -112,8 +140,8 @@ function AuthGuardContent({ children, fallback = defaultFallback }: AuthGuardPro
     navigation,
   ]);
 
-  if (isCheckingSession || isOAuthCallback) return <>{fallback}</>;
-  if (isOAuthCallback && isLoginPage) return <>{fallback}</>;
+  if (!ranInitialAuthCheck) return <>{fallback}</>;
+  if (isOAuthCallback) return <>{fallback}</>;
   if (!session.isLoggedIn && !isLoginPage) return null;
   if (session.isLoggedIn && isLoginPage) return null;
   return <>{children}</>;

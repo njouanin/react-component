@@ -53,17 +53,7 @@ function useSolidLoginNavigation() {
 var import_react2 = require("react");
 var import_solid_react = require("@ldo/solid-react");
 var import_jsx_runtime2 = require("react/jsx-runtime");
-function hasSessionInStorage() {
-  if (typeof window === "undefined") return false;
-  try {
-    const keys = Object.keys(localStorage);
-    return keys.some(
-      (key) => key.includes("solidClientAuthn") || key.includes("solid-auth") || key.includes("oidc") || key.includes("session")
-    );
-  } catch {
-    return false;
-  }
-}
+var REDIRECT_RETURN_TO_KEY = "solid-login-returnTo";
 var defaultFallback = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
   "div",
   {
@@ -78,10 +68,8 @@ var defaultFallback = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
   }
 );
 function AuthGuardContent({ children, fallback = defaultFallback }) {
-  const { session } = (0, import_solid_react.useSolidAuth)();
+  const { session, ranInitialAuthCheck = true } = (0, import_solid_react.useSolidAuth)();
   const nav = useSolidLoginNavigation();
-  const [isCheckingSession, setIsCheckingSession] = (0, import_react2.useState)(true);
-  const [hasSessionIndicator] = (0, import_react2.useState)(() => hasSessionInStorage());
   const [wasLoggedIn, setWasLoggedIn] = (0, import_react2.useState)(false);
   if (!nav) {
     if (process.env.NODE_ENV !== "production") {
@@ -96,52 +84,90 @@ function AuthGuardContent({ children, fallback = defaultFallback }) {
   const pathname = navigation.getPathname();
   const isOAuthCallback = searchParams.has("code") || searchParams.has("state");
   const isLoginPage = pathname === config.loginPath;
-  const hasSessionData = !!(session.webId || session.sessionId || session.clientAppId);
+  const redirectToLogin = () => {
+    const current = pathname || "/";
+    if (current === config.loginPath || current === config.homePath) {
+      navigation.replace(config.loginPath);
+    } else {
+      const returnTo = encodeURIComponent(current);
+      navigation.replace(`${config.loginPath}?returnTo=${returnTo}`);
+    }
+  };
+  (0, import_react2.useEffect)(() => {
+    if (typeof window === "undefined" || !isLoginPage || session.isLoggedIn) return;
+    const returnTo = searchParams.get("returnTo");
+    if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      try {
+        sessionStorage.setItem(REDIRECT_RETURN_TO_KEY, returnTo);
+      } catch {
+      }
+    }
+  }, [isLoginPage, session.isLoggedIn]);
   (0, import_react2.useEffect)(() => {
     if (session.isLoggedIn) setWasLoggedIn(true);
     if (isOAuthCallback) {
-      setIsCheckingSession(true);
       if (session.isLoggedIn) {
-        setIsCheckingSession(false);
-        const t2 = setTimeout(() => navigation.redirect(config.homePath), 200);
-        return () => clearTimeout(t2);
+        let target = config.homePath;
+        const returnToUrl = searchParams.get("returnTo");
+        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
+          target = returnToUrl;
+        } else if (typeof window !== "undefined") {
+          try {
+            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
+            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
+              target = stored;
+            }
+            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
+          } catch {
+          }
+        }
+        const t = setTimeout(() => navigation.redirect(target), 200);
+        return () => clearTimeout(t);
       }
-      const maxWait = setTimeout(() => setIsCheckingSession(false), 1e4);
-      return () => clearTimeout(maxWait);
+      return;
     }
+    if (!ranInitialAuthCheck) return;
     if (session.isLoggedIn) {
-      setIsCheckingSession(false);
-      if (isLoginPage) navigation.replace(config.homePath);
+      if (isLoginPage) {
+        let target = config.homePath;
+        const returnToUrl = searchParams.get("returnTo");
+        if (returnToUrl && returnToUrl.startsWith("/") && !returnToUrl.startsWith("//")) {
+          target = returnToUrl;
+        } else if (typeof window !== "undefined") {
+          try {
+            const stored = sessionStorage.getItem(REDIRECT_RETURN_TO_KEY);
+            if (stored && stored.startsWith("/") && !stored.startsWith("//")) {
+              target = stored;
+            }
+            sessionStorage.removeItem(REDIRECT_RETURN_TO_KEY);
+          } catch {
+          }
+        }
+        navigation.replace(target);
+      }
       return;
     }
     if (wasLoggedIn && !session.isLoggedIn) {
-      setIsCheckingSession(false);
-      if (!isLoginPage) navigation.replace(config.loginPath);
+      if (!isLoginPage) redirectToLogin();
       return;
     }
-    const shouldWait = hasSessionData || hasSessionIndicator;
-    const t = setTimeout(() => {
-      setIsCheckingSession(false);
-      if (!session.isLoggedIn && !isLoginPage && !isOAuthCallback) {
-        navigation.replace(config.loginPath);
-      }
-    }, shouldWait ? 2e3 : 200);
-    return () => clearTimeout(t);
+    if (!session.isLoggedIn && !isLoginPage) {
+      redirectToLogin();
+    }
   }, [
+    ranInitialAuthCheck,
     session.isLoggedIn,
     session.webId,
     session.sessionId,
     isOAuthCallback,
-    hasSessionIndicator,
-    hasSessionData,
     wasLoggedIn,
     isLoginPage,
     config.loginPath,
     config.homePath,
     navigation
   ]);
-  if (isCheckingSession || isOAuthCallback) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
-  if (isOAuthCallback && isLoginPage) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
+  if (!ranInitialAuthCheck) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
+  if (isOAuthCallback) return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children: fallback });
   if (!session.isLoggedIn && !isLoginPage) return null;
   if (session.isLoggedIn && isLoginPage) return null;
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_jsx_runtime2.Fragment, { children });

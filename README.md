@@ -1,17 +1,21 @@
 # solid-react-component
 
-Reusable React components for [Solid](https://solidproject.org/) apps. One package for login, auth guard, and more—so you depend on a single library instead of many.
+Reusable React components for Solid apps. One package that will grow to include login, profile, and other components—so you depend on a single library instead of many.
 
 **Currently included:**
 
-- **Login** – Solid OIDC login UI and auth guard (customizable, with an optional Next.js adapter).
+- **Login** – Solid OIDC login UI and auth guard. Two-column layout (branding + form), combobox-style provider picker, optional footer links. Next.js adapter included.
+
+---
 
 ## Requirements
 
 - **React** 18+
-- **[@ldo/solid-react](https://www.npmjs.com/package/@ldo/solid-react)** – wrap your app in `BrowserSolidLdoProvider`
+- **[@ldo/solid-react](https://www.npmjs.com/package/@ldo/solid-react)** – Your app must be wrapped in `BrowserSolidLdoProvider` (or `SolidLdoProvider`) so auth and session work.
 
 For the **Next.js** login adapter you also need **Next.js 13+** (App Router).
+
+---
 
 ## Installation
 
@@ -19,27 +23,27 @@ For the **Next.js** login adapter you also need **Next.js 13+** (App Router).
 npm i solid-react-component @ldo/solid-react react
 ```
 
-With Next.js (for the login adapter):
+For Next.js apps:
 
 ```bash
 npm i solid-react-component @ldo/solid-react next react
 ```
 
-## Login
+---
 
-### Quick start (Next.js)
+## Login – Next.js implementation
 
-1. Wrap your app in `BrowserSolidLdoProvider` (from `@ldo/solid-react`).
-2. Wrap the tree that needs auth in `Suspense` and `SolidLoginNavigationProviderNext`, then `AuthGuard`.
-3. Render `SolidLoginPage` on your login route.
+### 1. Wrap the app with LDO’s provider
+
+Your app must use `BrowserSolidLdoProvider` from `@ldo/solid-react` so session and login work.
 
 ```tsx
 // app/layout.tsx
 import { BrowserSolidLdoProvider } from "@ldo/solid-react";
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <body>
         <BrowserSolidLdoProvider>{children}</BrowserSolidLdoProvider>
       </body>
@@ -48,18 +52,34 @@ export default function RootLayout({ children }) {
 }
 ```
 
+### 2. Protect routes with the auth guard
+
+Wrap the part of the tree that requires authentication in **Suspense**, **SolidLoginNavigationProviderNext**, and **AuthGuard**. Use the same config for both the home page and the login page.
+
+**Config:**
+
+- `loginPath` – Path to your login page (e.g. `"/login"`). Unauthenticated users are redirected here.
+- `homePath` – Path after login when there is no `returnTo` (e.g. `"/"`).
+
 ```tsx
-// app/page.tsx (home)
+// app/page.tsx (home or any protected page)
 "use client";
+
 import { Suspense } from "react";
 import { SolidLoginNavigationProviderNext, AuthGuard } from "solid-react-component/login/next";
 
+const loadingFallback = (
+  <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+    <span>Loading...</span>
+  </div>
+);
+
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={loadingFallback}>
       <SolidLoginNavigationProviderNext config={{ loginPath: "/login", homePath: "/" }}>
-        <AuthGuard>
-          <YourApp />
+        <AuthGuard fallback={loadingFallback}>
+          <YourMainApp />
         </AuthGuard>
       </SolidLoginNavigationProviderNext>
     </Suspense>
@@ -67,23 +87,43 @@ export default function Home() {
 }
 ```
 
+### 3. Add the login page
+
+Render **SolidLoginPage** on your login route. Pass the **logo** from your app (the package does not ship assets). You can also pass **footer** URLs so the default footer shows “GitHub” and “Report an issue” links.
+
 ```tsx
 // app/login/page.tsx
 "use client";
+
 import { Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { SolidLoginNavigationProviderNext, AuthGuard, SolidLoginPage } from "solid-react-component/login/next";
+import {
+  SolidLoginNavigationProviderNext,
+  AuthGuard,
+  SolidLoginPage,
+} from "solid-react-component/login/next";
+
+const loadingFallback = (
+  <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+    <span>Loading...</span>
+  </div>
+);
 
 export default function Login() {
   const router = useRouter();
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={loadingFallback}>
       <SolidLoginNavigationProviderNext config={{ loginPath: "/login", homePath: "/" }}>
-        <AuthGuard>
+        <AuthGuard fallback={loadingFallback}>
           <SolidLoginPage
             onAlreadyLoggedIn={() => router.replace("/")}
+            logo="/your-logo.svg"
+            logoAlt="My App Logo"
             title="Sign in"
             subtitle="to continue to My App"
+            footerGitHubUrl="https://github.com/your-org/your-app"
+            footerIssuesUrl="https://github.com/your-org/your-app/issues/new"
           />
         </AuthGuard>
       </SolidLoginNavigationProviderNext>
@@ -92,46 +132,119 @@ export default function Login() {
 }
 ```
 
-### Import paths
+### 4. Next.js config (recommended)
 
-| Import | Use case |
-|--------|----------|
-| `solid-react-component/login/next` | Next.js: provider, guard, and login page wired to Next Router. |
-| `solid-react-component/login` | Any React app: same components; you provide navigation via `SolidLoginNavigationProvider`. |
-| `solid-react-component` | Barrel re-export of login; use the subpaths above for better tree-shaking. |
+If you use the package from npm, add it to `transpilePackages` so Next resolves the package’s subpath exports correctly:
 
-### Customizing the login page
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
 
-- **Props:** `logo`, `logoAlt`, `title`, `subtitle`, `inputPlaceholder`, `inputLabel`, `buttonLabel`, `buttonLoadingLabel`, `defaultIssuer`, `presetIssuers`, `className`, `footerGitHubUrl`, `footerIssuesUrl`.
-- **Slots:** `renderLogo`, `renderForm`, `renderFooter`. Use `renderForm` to replace the entire form UI.
+const nextConfig: NextConfig = {
+  transpilePackages: ["solid-react-component"],
+};
 
-### Headless login
+export default nextConfig;
+```
+
+---
+
+## How auth and redirects work
+
+### Session restore on refresh
+
+The guard uses **LDO’s `ranInitialAuthCheck`** from `useSolidAuth()`. It shows the loading fallback until the initial auth check (including session restore from storage) has finished. Only then does it decide whether to redirect to login. So **refreshing while already logged in does not send you to the login page**; you stay on the same URL.
+
+See [LDO useSolidAuth](https://ldo.js.org/1.0.0-alpha.X/api/solid-react/useSolidAuth/) for `ranInitialAuthCheck`.
+
+### returnTo (deep link back after login)
+
+- When an unauthenticated user hits a protected path (e.g. `/dashboard/settings`), the guard redirects to `/login?returnTo=%2Fdashboard%2Fsettings`.
+- After successful login (including after the OAuth redirect), the guard redirects to the `returnTo` path if it’s present and safe (starts with `/`, not `//`). If the IdP strips query params on callback, the package stores `returnTo` in `sessionStorage` when you land on the login page and uses it after the callback.
+- If there is no valid `returnTo`, the user is sent to `homePath` (e.g. `"/"`).
+
+---
+
+## SolidLoginPage – props reference
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `onAlreadyLoggedIn` | `() => void` | Called when the user is already logged in (e.g. `() => router.replace("/")`). |
+| `logo` | `string` | **Required from your app.** URL to your logo image (e.g. `"/logo.svg"`). Not shipped in the package. |
+| `logoAlt` | `string` | Alt text for the logo image. |
+| `title` | `string` | Heading on the branding side (default: `"Sign in"`). |
+| `subtitle` | `string` | Subheading (default: `"to continue"`). |
+| `footerGitHubUrl` | `string` | If set with `footerIssuesUrl`, shows a footer with “GitHub” and “Report an issue” links. |
+| `footerIssuesUrl` | `string` | See `footerGitHubUrl`. |
+| `inputPlaceholder` | `string` | Placeholder for the provider URL input. |
+| `inputLabel` | `string` | Label above the input (default: `"Solid Identity Provider"`). |
+| `buttonLabel` | `string` | Submit button text (default: `"Next"`). |
+| `buttonLoadingLabel` | `string` | Submit button text while logging in (default: `"Signing in..."`). |
+| `defaultIssuer` | `string` | Pre-fill the issuer input. |
+| `presetIssuers` | `PresetIssuer[]` | Options in the dropdown (default: Solid Community, Inrupt). |
+| `className` | `string` | Extra class on the main container. |
+| `renderLogo` | `() => ReactNode` | Replace the default logo block. |
+| `renderForm` | `(props) => ReactNode` | Replace the entire form (see headless usage). |
+| `renderFooter` | `() => ReactNode` | Replace the default footer. |
+
+---
+
+## Customizing the login page
+
+- **Logo:** Pass `logo="/path/to/logo.svg"` from your app’s `public` (or asset URL). The package does not include assets.
+- **Footer links:** Set `footerGitHubUrl` and `footerIssuesUrl` to show the default “GitHub” and “Report an issue” links. Or use `renderFooter` for a custom footer.
+- **Full custom form:** Use `renderForm` and receive `{ issuerInput, setIssuerInput, error, presetIssuers, isLoading, onSubmit, onIssuerChange }` to build your own UI while keeping auth logic.
+
+---
+
+## Import paths
+
+| Import from | Use for |
+|-------------|--------|
+| `solid-react-component/login/next` | Next.js: `SolidLoginNavigationProviderNext`, `AuthGuard`, `SolidLoginPage`. Use in App Router pages. |
+| `solid-react-component/login` | Core login: `AuthGuard`, `SolidLoginPage`, `useSolidLogin`, `LoginFormControl`, etc. You provide navigation via `SolidLoginNavigationProvider`. |
+| `solid-react-component` | Barrel; re-exports from the login entry. Prefer subpaths above for clearer imports. |
+
+---
+
+## Headless login
+
+If you want your own UI and only need the auth logic:
 
 ```tsx
 import { useSolidLogin, LoginFormControl, validateIssuerUrl } from "solid-react-component/login";
 ```
 
-- **`useSolidLogin({ defaultIssuer, presetIssuers })`** – hook returning `session`, issuer state, and `validateAndSubmit`.
-- **`LoginFormControl`** – render-prop component that exposes the same state and handlers.
-- **`validateIssuerUrl(url)`** – returns `{ valid, error }`.
+- **`useSolidLogin({ defaultIssuer, presetIssuers, onAlreadyLoggedIn })`** – Returns `session`, `issuerInput`, `setIssuerInput`, `isLoading`, `error`, `presetIssuers`, `validateAndSubmit`.
+- **`LoginFormControl`** – Render-prop component that provides the same state and handlers to children.
+- **`validateIssuerUrl(url)`** – Returns `{ valid: boolean, error: string | null }`.
 
-### Other React apps (no Next.js)
+---
 
-Implement the `SolidLoginNavigation` interface (pathname, search params, replace, redirect) and provide it via `SolidLoginNavigationProvider`. See `src/login/navigation.ts` for the type and `src/login/next.tsx` for a Next.js implementation example.
+## AuthGuard – fallback
+
+`AuthGuard` accepts an optional **`fallback`** prop (e.g. a loading spinner). It is shown:
+
+- Until LDO’s initial auth check has run (`ranInitialAuthCheck`).
+- During the OAuth callback (when the URL has `code` and `state`).
+
+Use the same fallback in both your protected pages and the login page for a consistent loading state.
+
+---
 
 ## Package structure
 
-Components are grouped by feature and exposed as subpaths:
-
 | Subpath | Contents |
-|---------|----------|
-| `solid-react-component` | Re-exports (e.g. login) |
-| `solid-react-component/login` | Login: guard, page, hooks, navigation types |
-| `solid-react-component/login/next` | Login + Next.js adapter |
+|--------|----------|
+| `solid-react-component` | Re-exports (barrel). |
+| `solid-react-component/login` | Login: guard, page, hooks, types. |
+| `solid-react-component/login/next` | Login + Next.js adapter (provider + guard + page). |
 
-Future areas (e.g. profile) will follow the same pattern: `solid-react-component/profile`, `solid-react-component/profile/next`, etc.
+Future components (e.g. profile) can follow the same pattern: `solid-react-component/profile`, `solid-react-component/profile/next`, etc.
 
-## Publishing
+---
+
+## Building and publishing
 
 From the package directory:
 
@@ -140,7 +253,9 @@ npm run build
 npm publish
 ```
 
-**Repository:** [https://github.com/solid/solidreactcomponent](https://github.com/solid/solidreactcomponent)
+Unscoped packages are public by default. Bump `version` in `package.json` before each publish.
+
+---
 
 ## License
 
