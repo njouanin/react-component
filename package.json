@@ -1,6 +1,6 @@
 {
   "name": "solid-react-component",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Reusable React components for Solid apps (login, and more to come)",
   "type": "module",
   "main": "./dist/index.cjs",

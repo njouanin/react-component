@@ -1,7 +1,7 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
-import { S as SolidLoginConfig } from '../navigation-CCMzXY2v.js';
-export { A as AuthGuard, a as SolidLoginPage } from '../navigation-CCMzXY2v.js';
+import { S as SolidLoginConfig } from '../navigation-8m8VBbGz.js';
+export { A as AuthGuard, a as SolidLoginPage } from '../navigation-8m8VBbGz.js';
 import '@inrupt/solid-client-authn-core';
 
 /**

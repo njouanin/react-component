@@ -132,6 +132,22 @@ export default function Login() {
 }
 ```
 
+### Custom redirect after login
+
+By default, the IdP redirects back to the login page URL after authentication. If you want the user to land on a different page (e.g. your home page with a query param), pass `redirectUrl`:
+
+```tsx
+<SolidLoginPage
+  redirectUrl={`${window.location.origin}/?showModal=true`}
+  onAlreadyLoggedIn={() => router.replace("/")}
+  logo="/logo.svg"
+  title="Sign in"
+  subtitle="to continue to My App"
+/>
+```
+
+This tells the IdP to send the user straight to `/?showModal=true` instead of back to `/login`, avoiding a visible bounce through the login page.
+
 ### 4. Next.js config (recommended)
 
 If you use the package from npm, add it to `transpilePackages` so Next resolves the package’s subpath exports correctly:
@@ -170,6 +186,7 @@ See [LDO useSolidAuth](https://ldo.js.org/1.0.0-alpha.X/api/solid-react/useSolid
 | Prop | Type | Description |
 |------|------|-------------|
 | `onAlreadyLoggedIn` | `() => void` | Called when the user is already logged in (e.g. `() => router.replace("/")`). |
+| `redirectUrl` | `string` | URL the IdP should redirect back to after authentication. Defaults to `window.location.href` (the login page). Useful when you want the IdP to send the user straight to a different page (e.g. `"/?showModal=true"`) instead of back to `/login`. |
 | `logo` | `string` | **Required from your app.** URL to your logo image (e.g. `"/logo.svg"`). Not shipped in the package. |
 | `logoAlt` | `string` | Alt text for the logo image. |
 | `title` | `string` | Heading on the branding side (default: `"Sign in"`). |
@@ -215,7 +232,7 @@ If you want your own UI and only need the auth logic:
 import { useSolidLogin, LoginFormControl, validateIssuerUrl } from "solid-react-component/login";
 ```
 
-- **`useSolidLogin({ defaultIssuer, presetIssuers, onAlreadyLoggedIn })`** – Returns `session`, `issuerInput`, `setIssuerInput`, `isLoading`, `error`, `presetIssuers`, `validateAndSubmit`.
+- **`useSolidLogin({ defaultIssuer, presetIssuers, onAlreadyLoggedIn, redirectUrl })`** – Returns `session`, `issuerInput`, `setIssuerInput`, `isLoading`, `error`, `presetIssuers`, `validateAndSubmit`.
 - **`LoginFormControl`** – Render-prop component that provides the same state and handlers to children.
 - **`validateIssuerUrl(url)`** – Returns `{ valid: boolean, error: string | null }`.
 

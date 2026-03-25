@@ -14,6 +14,8 @@ import type { PresetIssuer } from "./useSolidLogin";
 export interface SolidLoginPageProps {
   /** Redirect when already logged in (e.g. router.replace("/")) */
   onAlreadyLoggedIn?: () => void;
+  /** URL the IdP should redirect back to after auth. Defaults to window.location.href (the login page). */
+  redirectUrl?: string;
   defaultIssuer?: string;
   presetIssuers?: PresetIssuer[];
 
@@ -142,6 +144,7 @@ function ButtonSpinner() {
 
 export function SolidLoginPage({
   onAlreadyLoggedIn,
+  redirectUrl,
   defaultIssuer,
   presetIssuers,
   logo,
@@ -167,7 +170,7 @@ export function SolidLoginPage({
     error,
     presetIssuers: presets,
     validateAndSubmit,
-  } = useSolidLogin({ defaultIssuer, presetIssuers });
+  } = useSolidLogin({ defaultIssuer, presetIssuers, redirectUrl });
 
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);

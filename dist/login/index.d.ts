@@ -1,5 +1,5 @@
-import { b as SolidLoginNavigation, S as SolidLoginConfig } from '../navigation-CCMzXY2v.js';
-export { A as AuthGuard, D as DEFAULT_CONFIG, P as PresetIssuer, a as SolidLoginPage, c as SolidLoginPageProps, u as useSolidLogin, v as validateIssuerUrl } from '../navigation-CCMzXY2v.js';
+import { b as SolidLoginNavigation, S as SolidLoginConfig } from '../navigation-8m8VBbGz.js';
+export { A as AuthGuard, D as DEFAULT_CONFIG, P as PresetIssuer, a as SolidLoginPage, c as SolidLoginPageProps, u as useSolidLogin, v as validateIssuerUrl } from '../navigation-8m8VBbGz.js';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ReactNode } from 'react';
 import '@inrupt/solid-client-authn-core';

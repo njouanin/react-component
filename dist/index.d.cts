@@ -1,4 +1,4 @@
-export { A as AuthGuard, D as DEFAULT_CONFIG, P as PresetIssuer, S as SolidLoginConfig, b as SolidLoginNavigation, a as SolidLoginPage, u as useSolidLogin, v as validateIssuerUrl } from './navigation-CCMzXY2v.cjs';
+export { A as AuthGuard, D as DEFAULT_CONFIG, P as PresetIssuer, S as SolidLoginConfig, b as SolidLoginNavigation, a as SolidLoginPage, u as useSolidLogin, v as validateIssuerUrl } from './navigation-8m8VBbGz.cjs';
 export { LoginFormControl, SolidLoginNavigationProvider, useSolidLoginNavigation } from './login/index.cjs';
 import 'react/jsx-runtime';
 import 'react';

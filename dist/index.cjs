@@ -218,14 +218,14 @@ function useSolidLogin(options = {}) {
     setError(null);
     setIsLoading(true);
     try {
-      await login(trimmed);
+      await login(trimmed, options.redirectUrl ? { redirectUrl: options.redirectUrl } : void 0);
       return true;
     } catch (e) {
       console.error("Login failed:", e);
       setIsLoading(false);
       return false;
     }
-  }, [issuerInput, login]);
+  }, [issuerInput, login, options.redirectUrl]);
   const setIssuer = (0, import_react3.useCallback)((value) => {
     setIssuerInput(value);
     setError(null);
@@ -335,6 +335,7 @@ function ButtonSpinner() {
 }
 function SolidLoginPage({
   onAlreadyLoggedIn,
+  redirectUrl,
   defaultIssuer,
   presetIssuers,
   logo,
@@ -360,7 +361,7 @@ function SolidLoginPage({
     error,
     presetIssuers: presets,
     validateAndSubmit
-  } = useSolidLogin({ defaultIssuer, presetIssuers });
+  } = useSolidLogin({ defaultIssuer, presetIssuers, redirectUrl });
   const [showDropdown, setShowDropdown] = (0, import_react4.useState)(false);
   const [highlightedIndex, setHighlightedIndex] = (0, import_react4.useState)(-1);
   const inputRef = (0, import_react4.useRef)(null);

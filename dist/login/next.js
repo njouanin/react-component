@@ -195,14 +195,14 @@ function useSolidLogin(options = {}) {
     setError(null);
     setIsLoading(true);
     try {
-      await login(trimmed);
+      await login(trimmed, options.redirectUrl ? { redirectUrl: options.redirectUrl } : void 0);
       return true;
     } catch (e) {
       console.error("Login failed:", e);
       setIsLoading(false);
       return false;
     }
-  }, [issuerInput, login]);
+  }, [issuerInput, login, options.redirectUrl]);
   const setIssuer = useCallback((value) => {
     setIssuerInput(value);
     setError(null);
@@ -312,6 +312,7 @@ function ButtonSpinner() {
 }
 function SolidLoginPage({
   onAlreadyLoggedIn,
+  redirectUrl,
   defaultIssuer,
   presetIssuers,
   logo,
@@ -337,7 +338,7 @@ function SolidLoginPage({
     error,
     presetIssuers: presets,
     validateAndSubmit
-  } = useSolidLogin({ defaultIssuer, presetIssuers });
+  } = useSolidLogin({ defaultIssuer, presetIssuers, redirectUrl });
   const [showDropdown, setShowDropdown] = useState2(false);
   const [highlightedIndex, setHighlightedIndex] = useState2(-1);
   const inputRef = useRef2(null);
