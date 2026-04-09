@@ -63,5 +63,8 @@
     "login",
     "authentication"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "contributors": [
+    "Precious Oritsedere (https://github.com/PreciousOritsedere)"
+  ]
 }
