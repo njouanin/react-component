@@ -1,4 +1,4 @@
-# solid-react-component
+# @solid/react-component
 
 Reusable React components for Solid apps. One package that will grow to include login, profile, and other components—so you depend on a single library instead of many.
 
@@ -20,13 +20,13 @@ For the **Next.js** login adapter you also need **Next.js 13+** (App Router).
 ## Installation
 
 ```bash
-npm i solid-react-component @ldo/solid-react react
+npm i @solid/react-component @ldo/solid-react react
 ```
 
 For Next.js apps:
 
 ```bash
-npm i solid-react-component @ldo/solid-react next react
+npm i @solid/react-component @ldo/solid-react next react
 ```
 
 ---
@@ -66,7 +66,7 @@ Wrap the part of the tree that requires authentication in **Suspense**, **SolidL
 "use client";
 
 import { Suspense } from "react";
-import { SolidLoginNavigationProviderNext, AuthGuard } from "solid-react-component/login/next";
+import { SolidLoginNavigationProviderNext, AuthGuard } from "@solid/react-component/login/next";
 
 const loadingFallback = (
   <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
@@ -101,7 +101,7 @@ import {
   SolidLoginNavigationProviderNext,
   AuthGuard,
   SolidLoginPage,
-} from "solid-react-component/login/next";
+} from "@solid/react-component/login/next";
 
 const loadingFallback = (
   <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
@@ -157,7 +157,7 @@ If you use the package from npm, add it to `transpilePackages` so Next resolves 
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["solid-react-component"],
+  transpilePackages: ["@solid/react-component"],
 };
 
 export default nextConfig;
@@ -218,9 +218,9 @@ See [LDO useSolidAuth](https://ldo.js.org/1.0.0-alpha.X/api/solid-react/useSolid
 
 | Import from | Use for |
 |-------------|--------|
-| `solid-react-component/login/next` | Next.js: `SolidLoginNavigationProviderNext`, `AuthGuard`, `SolidLoginPage`. Use in App Router pages. |
-| `solid-react-component/login` | Core login: `AuthGuard`, `SolidLoginPage`, `useSolidLogin`, `LoginFormControl`, etc. You provide navigation via `SolidLoginNavigationProvider`. |
-| `solid-react-component` | Barrel; re-exports from the login entry. Prefer subpaths above for clearer imports. |
+| `@solid/react-component/login/next` | Next.js: `SolidLoginNavigationProviderNext`, `AuthGuard`, `SolidLoginPage`. Use in App Router pages. |
+| `@solid/react-component/login` | Core login: `AuthGuard`, `SolidLoginPage`, `useSolidLogin`, `LoginFormControl`, etc. You provide navigation via `SolidLoginNavigationProvider`. |
+| `@solid/react-component` | Barrel; re-exports from the login entry. Prefer subpaths above for clearer imports. |
 
 ---
 
@@ -229,7 +229,7 @@ See [LDO useSolidAuth](https://ldo.js.org/1.0.0-alpha.X/api/solid-react/useSolid
 If you want your own UI and only need the auth logic:
 
 ```tsx
-import { useSolidLogin, LoginFormControl, validateIssuerUrl } from "solid-react-component/login";
+import { useSolidLogin, LoginFormControl, validateIssuerUrl } from "@solid/react-component/login";
 ```
 
 - **`useSolidLogin({ defaultIssuer, presetIssuers, onAlreadyLoggedIn, redirectUrl })`** – Returns `session`, `issuerInput`, `setIssuerInput`, `isLoading`, `error`, `presetIssuers`, `validateAndSubmit`.
@@ -253,11 +253,11 @@ Use the same fallback in both your protected pages and the login page for a cons
 
 | Subpath | Contents |
 |--------|----------|
-| `solid-react-component` | Re-exports (barrel). |
-| `solid-react-component/login` | Login: guard, page, hooks, types. |
-| `solid-react-component/login/next` | Login + Next.js adapter (provider + guard + page). |
+| `@solid/react-component` | Re-exports (barrel). |
+| `@solid/react-component/login` | Login: guard, page, hooks, types. |
+| `@solid/react-component/login/next` | Login + Next.js adapter (provider + guard + page). |
 
-Future components (e.g. profile) can follow the same pattern: `solid-react-component/profile`, `solid-react-component/profile/next`, etc.
+Future components (e.g. profile) can follow the same pattern: `@solid/react-component/profile`, `@solid/react-component/profile/next`, etc.
 
 ---
 

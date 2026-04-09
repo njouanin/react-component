@@ -1,11 +1,11 @@
 /**
- * @solid/react-components
+ * @solid/react-component
  *
  * Reusable React components for Solid apps. Each area (login, profile, etc.) is
  * available under its own subpath for tree-shaking and clear imports.
  *
  * Current components:
- * - Login: @solid/react-components/login or @solid/react-components/login/next (Next.js)
+ * - Login: @solid/react-component/login or @solid/react-component/login/next (Next.js)
  */
 
 export {

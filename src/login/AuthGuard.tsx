@@ -190,8 +190,8 @@ function AuthGuardContent({
   if (!nav) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
-        "solid-react-component: AuthGuard requires SolidLoginNavigationProvider " +
-          "(or use 'solid-react-component/login/next')",
+        "@solid/react-component: AuthGuard requires SolidLoginNavigationProvider " +
+          "(or use '@solid/react-component/login/next')",
       );
     }
     return <>{children}</>;
