@@ -340,8 +340,8 @@ describe("SolidLoginPage", () => {
     });
 
     it("renderForm receives all expected props", () => {
-      const renderForm = jest.fn(() => <div>Custom</div>);
-      render(<SolidLoginPage renderForm={renderForm} />);
+      const renderForm = jest.fn((_props: Record<string, unknown>) => <div>Custom</div>);
+      render(<SolidLoginPage renderForm={renderForm as any} />);
 
       expect(renderForm).toHaveBeenCalledTimes(1);
       const props = renderForm.mock.calls[0][0];
