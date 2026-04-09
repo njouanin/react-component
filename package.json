@@ -31,12 +31,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/solid/solidreactcomponent.git"
+    "url": "git+https://github.com/solid/react-component.git"
   },
   "bugs": {
-    "url": "https://github.com/solid/solidreactcomponent/issues"
+    "url": "https://github.com/solid/react-component/issues"
   },
-  "homepage": "https://github.com/solid/solidreactcomponent#readme",
+  "homepage": "https://github.com/solid/react-component#readme",
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch"
