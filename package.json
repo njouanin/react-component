@@ -39,19 +39,29 @@
   "homepage": "https://github.com/solid/react-component#readme",
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "@ldo/solid-react": ">=1.0.0-alpha.33"
+    "@ldo/solid-react": ">=1.0.0-alpha.33",
+    "react": ">=18.0.0"
   },
   "optionalPeerDependencies": {
     "next": ">=13.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/react": "^19",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "next": "^15.0.0",
     "react": "^19",
+    "ts-jest": "^29.4.9",
     "tsup": "^8",
     "typescript": "^5"
   },
