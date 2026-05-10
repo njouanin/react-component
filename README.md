@@ -137,6 +137,7 @@ export default function Login() {
         <AuthGuard fallback={loadingFallback}>
           <SolidLoginPage
             onAlreadyLoggedIn={() => router.replace("/")}
+            redirectUrl="http://localhost:3000"
             logo="/your-logo.svg"
             logoAlt="My App Logo"
             title="Sign in"
